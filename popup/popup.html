@@ -6,12 +6,56 @@
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <h1>代理规则</h1>
-  <div class="rule-form">
-    <input type="text" id="url-filter-input" placeholder="输入要代理的 URL 模式，例如 *://api.example.com/*">
-    <button id="add-rule-btn">添加</button>
+  <div class="container">
+    <div class="header">
+      <h1>CORS Proxy</h1>
+      <p class="description">解决本地开发中的跨域请求问题</p>
+    </div>
+    
+    <div class="content">
+      <div class="form-group">
+        <label for="initiator-domain-input" class="label">生效域名</label>
+        <input 
+          type="text" 
+          id="initiator-domain-input" 
+          class="input"
+          placeholder="例如: localhost (留空则全局生效)"
+        >
+        <p class="hint">只有来自指定域名的请求才会被代理</p>
+      </div>
+      
+      <div class="divider"></div>
+      
+      <div class="form-group">
+        <label class="label">代理规则</label>
+        <div class="input-group">
+          <input 
+            type="text" 
+            id="url-filter-input" 
+            class="input"
+            placeholder="输入要代理的 URL 模式，例如 *://api.example.com/*"
+          >
+          <button id="add-rule-btn" class="btn btn-primary">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            添加
+          </button>
+        </div>
+      </div>
+      
+      <div class="rules-section">
+        <ul id="rules-list" class="rules-list"></ul>
+        <div id="empty-state" class="empty-state">
+          <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+          </svg>
+          <p>暂无代理规则</p>
+          <p class="empty-hint">添加你需要代理的 URL 模式</p>
+        </div>
+      </div>
+    </div>
   </div>
-  <ul id="rules-list"></ul>
   <script src="popup.js"></script>
 </body>
 </html>

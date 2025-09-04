@@ -2,7 +2,7 @@
 
 // 更新拦截规则的函数
 async function updateRules() {
-  const { rules } = await chrome.storage.local.get('rules');
+  const { rules, initiatorDomain } = await chrome.storage.local.get(['rules', 'initiatorDomain']);
   if (!rules || rules.length === 0) {
     // 如果没有规则，清空所有动态规则
     const existingRules = await chrome.declarativeNetRequest.getDynamicRules();
@@ -16,6 +16,18 @@ async function updateRules() {
 
   const newRules = rules.map((rule, index) => {
     const id = index + 1; // 规则 ID 必须是正整数
+    const condition = {
+      urlFilter: rule.urlFilter,
+      resourceTypes: [
+        'main_frame', 'sub_frame', 'stylesheet', 'script', 'image', 'font',
+        'object', 'xmlhttprequest', 'ping', 'csp_report', 'media', 'websocket'
+      ]
+    };
+
+    if (initiatorDomain && initiatorDomain.trim() !== '') {
+      condition.initiatorDomains = [initiatorDomain.trim()];
+    }
+
     return {
       id: id,
       priority: 1,
@@ -33,15 +45,7 @@ async function updateRules() {
           { header: 'Referer', operation: 'remove' }
         ]
       },
-      condition: {
-        // 匹配用户指定的URL模式
-        urlFilter: rule.urlFilter,
-        // 应用于所有类型的资源
-        resourceTypes: [
-          'main_frame', 'sub_frame', 'stylesheet', 'script', 'image', 'font', 
-          'object', 'xmlhttprequest', 'ping', 'csp_report', 'media', 'websocket'
-        ]
-      }
+      condition: condition
     };
   });
 
