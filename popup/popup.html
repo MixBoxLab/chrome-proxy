@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>CORS Proxy Settings</title>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <h1>代理规则</h1>
+  <div class="rule-form">
+    <input type="text" id="url-filter-input" placeholder="输入要代理的 URL 模式，例如 *://api.example.com/*">
+    <button id="add-rule-btn">添加</button>
+  </div>
+  <ul id="rules-list"></ul>
+  <script src="popup.js"></script>
+</body>
+</html>

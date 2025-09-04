@@ -1,0 +1,8 @@
+body { font-family: sans-serif; width: 300px; padding: 10px; }
+h1 { font-size: 16px; text-align: center; }
+.rule-form { display: flex; margin-bottom: 10px; }
+#url-filter-input { flex-grow: 1; padding: 5px; }
+#add-rule-btn { margin-left: 5px; }
+#rules-list { list-style: none; padding: 0; }
+#rules-list li { display: flex; justify-content: space-between; align-items: center; padding: 5px; border-bottom: 1px solid #eee; }
+.delete-btn { cursor: pointer; color: red; }
