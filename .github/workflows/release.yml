@@ -1,0 +1,167 @@
+name: Release to Chrome Web Store
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y imagemagick
+        
+    - name: Verify ImageMagick installation
+      run: magick -version
+      
+    - name: Generate icons from SVG
+      run: |
+        if [ -f "icons/icon.svg" ]; then
+          echo "Generating PNG icons from SVG..."
+          magick icons/icon.svg -background transparent -resize 16x16 icons/icon16.png
+          magick icons/icon.svg -background transparent -resize 48x48 icons/icon48.png
+          magick icons/icon.svg -background transparent -resize 128x128 icons/icon128.png
+          echo "Icons generated successfully"
+        else
+          echo "SVG icon not found, using existing PNG icons"
+        fi
+        
+    - name: Update manifest version
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          VERSION="${{ github.event.inputs.version }}"
+        else
+          VERSION="${GITHUB_REF#refs/tags/v}"
+        fi
+        echo "Setting version to: $VERSION"
+        
+        # Update manifest.json version
+        sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" manifest.json
+        
+        # Verify the change
+        grep "version" manifest.json
+        
+    - name: Create extension package
+      run: |
+        # Create build directory
+        mkdir -p build
+        
+        # Copy all necessary files
+        cp manifest.json build/
+        cp background.js build/
+        cp -r popup build/
+        cp -r icons build/
+        
+        # Create zip file
+        cd build
+        zip -r ../extension.zip .
+        cd ..
+        
+        echo "Extension package created: extension.zip"
+        ls -la extension.zip
+        
+    - name: Verify package contents
+      run: |
+        echo "Package contents:"
+        unzip -l extension.zip
+        
+    # 暂时禁用自动上传，等待 Google 验证完成
+    # - name: Upload to Chrome Web Store
+    #   if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    #   uses: mnao305/chrome-extension-upload@v5.0.0
+    #   with:
+    #     file-path: extension.zip
+    #     extension-id: ${{ secrets.CHROME_EXTENSION_ID }}
+    #     client-id: ${{ secrets.CHROME_CLIENT_ID }}
+    #     client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
+    #     refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
+    #     publish: true
+    
+    - name: Manual Upload Instructions
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+      run: |
+        echo "## ⚠️  手动上传说明" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "由于 Google 验证流程尚未完成，请手动上传到 Chrome Web Store：" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "1. 下载上方生成的 \`extension.zip\` 文件" >> $GITHUB_STEP_SUMMARY
+        echo "2. 访问 [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole)" >> $GITHUB_STEP_SUMMARY
+        echo "3. 选择你的扩展程序" >> $GITHUB_STEP_SUMMARY
+        echo "4. 点击 '上传新版本'" >> $GITHUB_STEP_SUMMARY
+        echo "5. 选择下载的 zip 文件并提交审核" >> $GITHUB_STEP_SUMMARY
+        
+    - name: Create GitHub Release
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: extension.zip
+        generate_release_notes: true
+        body: |
+          ## 🚀 新版本发布
+          
+          这个版本包含以下改进：
+          - 🐛 Bug 修复和性能优化
+          - ✨ 新功能和改进
+          - 📚 文档更新
+          
+          ### 安装方法
+          
+          1. **Chrome Web Store（推荐）**：
+             - 等待审核通过后，直接从商店安装
+          
+          2. **手动安装**：
+             - 下载下方的 `extension.zip` 文件
+             - 解压到本地文件夹
+             - 在 Chrome 中打开 `chrome://extensions/`
+             - 开启"开发者模式"
+             - 点击"加载已解压的扩展程序"
+             - 选择解压后的文件夹
+          
+          ### 更新日志
+          
+          查看完整的更新日志请参考 [commits](https://github.com/${{ github.repository }}/commits/${{ github.ref_name }})
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Workflow summary
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          VERSION="${{ github.event.inputs.version }}"
+        else
+          VERSION="${GITHUB_REF#refs/tags/v}"
+        fi
+        
+        echo "## 🎉 构建完成" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**版本**: $VERSION" >> $GITHUB_STEP_SUMMARY
+        echo "**构建时间**: $(date)" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📦 产物" >> $GITHUB_STEP_SUMMARY
+        echo "- extension.zip ($(ls -lh extension.zip | awk '{print $5}'))" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🚀 下一步" >> $GITHUB_STEP_SUMMARY
+        if [ "${{ github.event_name }}" = "push" ]; then
+          echo "- ✅ 已自动上传到 Chrome Web Store" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ 已创建 GitHub Release" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "- ⏳ 手动触发的构建，未自动发布" >> $GITHUB_STEP_SUMMARY
+          echo "- 💡 创建 tag 推送来触发自动发布" >> $GITHUB_STEP_SUMMARY
+        fi
