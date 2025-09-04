@@ -16,6 +16,16 @@ print_message() {
     echo -e "${color}${message}${NC}"
 }
 
+# 检查 jq 是否安装
+check_jq() {
+    if ! command -v jq &> /dev/null; then
+        print_message $RED "❌ Error: jq is not installed. Please install it to proceed."
+        print_message $YELLOW "   On macOS: brew install jq"
+        print_message $YELLOW "   On Debian/Ubuntu: sudo apt-get install jq"
+        exit 1
+    fi
+}
+
 # 显示使用方法
 show_usage() {
     echo "Usage: $0 [major|minor|patch]"
@@ -39,7 +49,7 @@ check_git_status() {
 
 # 获取当前版本
 get_current_version() {
-    grep '^version = ' Cargo.toml | sed 's/version = "\(.*\)"/\1/'
+    jq -r '.version' manifest.json
 }
 
 # 计算新版本
@@ -74,29 +84,19 @@ calculate_new_version() {
     echo "$major.$minor.$patch"
 }
 
-# 更新 Cargo.toml 中的版本
-update_cargo_version() {
+# 更新 manifest.json 中的版本
+update_manifest_version() {
     local new_version=$1
-    print_message $BLUE "📝 Updating Cargo.toml version to $new_version..."
-    cargo set-version $new_version
-}
-
-# 构建和测试
-build_and_test() {
-    print_message $BLUE "🔨 Building project..."
-    cargo build --release
-    
-    print_message $BLUE "🧪 Running tests..."
-    cargo test
-    
-    print_message $GREEN "✅ Build and tests passed!"
+    print_message $BLUE "📝 Updating manifest.json version to $new_version..."
+    # 使用 jq 更新版本号，-i 表示直接修改文件（在 macOS 上需要一个备份后缀，所以用 ''）
+    jq ".version = \"$new_version\"" manifest.json > manifest.json.tmp && mv manifest.json.tmp manifest.json
 }
 
 # 提交更改
 commit_changes() {
     local new_version=$1
     print_message $BLUE "📝 Committing version bump..."
-    git add Cargo.toml Cargo.lock
+    git add manifest.json
     git commit -m "chore: bump version to v$new_version"
 }
 
@@ -128,18 +128,20 @@ show_release_info() {
     print_message $YELLOW "  Tag:              v$new_version"
     echo ""
     print_message $BLUE "🔗 GitHub Actions will now build and publish the release automatically."
-    print_message $BLUE "   Check the progress at: https://github.com/MixBoxLab/2fa-cli/actions"
+    print_message $BLUE "   Check the progress at: https://github.com/MixBoxLab/chrome-proxy/actions"
     echo ""
     print_message $GREEN "📋 Next steps:"
     print_message $GREEN "   1. Wait for GitHub Actions to complete the build"
-    print_message $GREEN "   2. Check the release page: https://github.com/MixBoxLab/2fa-cli/releases"
-    print_message $GREEN "   3. Test the installation script: curl -fsSL https://raw.githubusercontent.com/MixBoxLab/2fa-cli/main/install.sh | sh"
+    print_message $GREEN "   2. Check the release page: https://github.com/MixBoxLab/chrome-proxy/releases"
 }
 
 # 主函数
 main() {
     local bump_type=${1:-patch}
     
+    # 检查 jq
+    check_jq
+
     # 显示帮助信息
     if [[ "$1" == "-h" || "$1" == "--help" ]]; then
         show_usage
@@ -169,10 +171,7 @@ main() {
     fi
     
     # 更新版本
-    update_cargo_version $new_version
-    
-    # 构建和测试
-    build_and_test
+    update_manifest_version $new_version
     
     # 提交更改
     commit_changes $new_version
