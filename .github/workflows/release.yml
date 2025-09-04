@@ -24,26 +24,6 @@ jobs:
       with:
         node-version: '18'
         
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y imagemagick
-        
-    - name: Verify ImageMagick installation
-      run: magick -version
-      
-    - name: Generate icons from SVG
-      run: |
-        if [ -f "icons/icon.svg" ]; then
-          echo "Generating PNG icons from SVG..."
-          magick icons/icon.svg -background transparent -resize 16x16 icons/icon16.png
-          magick icons/icon.svg -background transparent -resize 48x48 icons/icon48.png
-          magick icons/icon.svg -background transparent -resize 128x128 icons/icon128.png
-          echo "Icons generated successfully"
-        else
-          echo "SVG icon not found, using existing PNG icons"
-        fi
-        
     - name: Update manifest version
       run: |
         if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
@@ -130,7 +110,7 @@ jobs:
           2. **手动安装**：
              - 下载下方的 `extension.zip` 文件
              - 解压到本地文件夹
-             - 在 Chrome 中打开 `chrome://extensions/`
+             - 在 Chrome 中打开 \`chrome://extensions/\`
              - 开启"开发者模式"
              - 点击"加载已解压的扩展程序"
              - 选择解压后的文件夹
